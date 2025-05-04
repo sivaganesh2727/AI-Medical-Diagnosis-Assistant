@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Medical Diagnosis Assistant</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+    <div class="container">
+        <h1>Medical Diagnosis Assistant</h1>
+        <form method="POST">
+            <label for="name">Patient-Name:</label>
+            <input type="text" name="name" required><br><br>
+
+            <label for="email">Email:</label>
+            <input type="email" name="email" required><br><br>
+
+            {% for i in range(1, 6) %}
+                <label for="symptom{{ i }}">Symptom {{ i }}:</label>
+                <select name="symptom{{ i }}">
+                    <option value="">-- Select Symptom --</option>
+                    {% for symptom in symptoms %}
+                        <option value="{{ symptom }}" {% if symptom in selected %}selected{% endif %}>{{ symptom }}</option>
+                    {% endfor %}
+                </select><br><br>
+            {% endfor %}
+
+            <button type="submit">Diagnose</button>
+        </form>
+
+        {% if prediction %}
+            <h2>Predicted Disease: <strong>{{ prediction }}</strong></h2>
+            {% if description %}
+                <p><strong>Description:</strong> {{ description }}</p>
+            {% endif %}
+            {% if precautions %}
+                <p><strong>Precautions:</strong></p>
+                <ul>
+                    {% for p in precautions %}
+                        <li>{{ p }}</li>
+                    {% endfor %}
+                </ul>
+            {% endif %}
+        {% endif %}
+    </div>
+</body>
+</html>
