@@ -6,9 +6,9 @@ import mysql.connector
 import smtplib
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
-import os
 import re
 from interface import render_form
+from db_config import db_config  # <-- ✅ Import your DB config
 
 # Load external CSS
 def local_css(file_name):
@@ -26,6 +26,24 @@ all_symptoms = severity_df["Symptom"].str.strip().tolist()
 
 # Streamlit App Title
 st.title("🩺 AI Medical Diagnosis Assistant")
+
+# Check MySQL Tables (for Debugging Connection)
+if st.sidebar.button("🔍 Check DB Tables"):
+    try:
+        conn = mysql.connector.connect(**db_config)
+        cursor = conn.cursor()
+        cursor.execute("SHOW TABLES;")
+        tables = cursor.fetchall()
+        cursor.close()
+        conn.close()
+        if tables:
+            st.sidebar.success("Connected! Tables found:")
+            for table in tables:
+                st.sidebar.write(table[0])
+        else:
+            st.sidebar.warning("Connected, but no tables found.")
+    except mysql.connector.Error as err:
+        st.sidebar.error(f"Database error: {err}")
 
 # User Input Form
 with st.form("diagnosis_form"):
@@ -67,29 +85,27 @@ if submit:
             for i, p in enumerate(precautions, 1):
                 st.write(f"{i}. {p}")
 
-        # Save to database
+        # Save to cloud database
         try:
-            with mysql.connector.connect(
-                host="localhost",
-                user="root",
-                password="siva@222777",  # 🔐 Use your DB password
-                database="medical_db"
-            ) as conn:
-                cursor = conn.cursor()
-                cursor.execute("INSERT INTO diagnosis (patient_name, symptoms, disease) VALUES (%s, %s, %s)",
-                               (name, ", ".join(symptoms_selected), prediction))
-                conn.commit()
-                st.success("🗂️ Diagnosis saved to database.")
-        except Exception as e:
+            conn = mysql.connector.connect(**db_config)
+            cursor = conn.cursor()
+            cursor.execute(
+                "INSERT INTO diagnosis (patient_name, symptoms, disease) VALUES (%s, %s, %s)",
+                (name, ", ".join(symptoms_selected), prediction)
+            )
+            conn.commit()
+            cursor.close()
+            conn.close()
+            st.success("🗂️ Diagnosis saved to database.")
+        except mysql.connector.Error as e:
             st.error(f"❌ Database error: {e}")
 
         # Send diagnosis via email
         if re.match(r"[^@]+@[^@]+\.[^@]+", email):
             try:
                 sender_email = "sivaganeshragam2004@gmail.com"
-                sender_password = "psco xeym ckxn yuew"  # 🔑 Use your 16-character Gmail App Password (no spaces)
+                sender_password = "psco xeym ckxn yuew"  # App password
 
-                # Compose the email
                 message = MIMEMultipart()
                 message["From"] = sender_email
                 message["To"] = email
@@ -111,7 +127,6 @@ Medical Assistant Team
 """
                 message.attach(MIMEText(body, "plain"))
 
-                # Send email
                 server = smtplib.SMTP("smtp.gmail.com", 587)
                 server.starttls()
                 server.login(sender_email, sender_password)
